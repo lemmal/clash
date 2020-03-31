@@ -1,2 +1,2 @@
-# clash
-a simple multi player game manager
+# Clash
+一个基于Java开发的简单多人游戏框架
