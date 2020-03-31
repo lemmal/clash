@@ -7,11 +7,12 @@ public class ThreadModeSynchronizer implements ISynchronizer{
 
     @Override
     public void submit(ISynchronizerRunnable task) {
-
+        //TODO
     }
 
     @Override
     public <T> T submit(ISynchronizerCallable<T> task) {
+        //TODO
         return null;
     }
 }

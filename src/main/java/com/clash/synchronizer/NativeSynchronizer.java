@@ -1,8 +1,5 @@
 package com.clash.synchronizer;
 
-import com.clash.bean.BeanConstruct;
-
-@BeanConstruct
 public class NativeSynchronizer implements ISynchronizer {
 
     @Override

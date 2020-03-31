@@ -19,7 +19,8 @@ public class BeanFactory {
 
     @SuppressWarnings("unchecked")
     public <T> T produce(Field field) throws BeanConstructException {
-        Constructor<T> constructor = (Constructor<T>) functions.get(field.getType());
+        BeanAutowire autowire = field.getAnnotation(BeanAutowire.class);
+        Constructor<T> constructor = (Constructor<T>) functions.get(autowire.value());
         constructor.setAccessible(true);
         return _produce(constructor);
     }
