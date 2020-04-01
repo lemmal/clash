@@ -5,6 +5,10 @@ package com.clash.bean;
  */
 public class BeanConstructException extends Exception {
 
+    public BeanConstructException(String message) {
+        super(message);
+    }
+
     public BeanConstructException(Throwable cause) {
         super(cause);
     }
