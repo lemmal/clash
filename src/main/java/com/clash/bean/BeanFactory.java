@@ -16,9 +16,10 @@ public class BeanFactory {
     private BeanParser beanParser;
     private Map<Class<?>, Object> instances;
 
-    public static IManager buildManager(Class<? extends IManager> clazz, String... paths) throws BeanParseException, BeanConstructException {
+    @SuppressWarnings("unchecked")
+    public static <T extends IManager> T buildManager(Class<T> clazz, String... paths) throws BeanParseException, BeanConstructException {
         BeanFactory factory = new BeanFactory(Arrays.stream(paths).collect(Collectors.toList()));
-        return (IManager) factory.instances.get(clazz);
+        return (T) factory.instances.get(IManager.class);
     }
 
     public BeanFactory(List<String> paths) throws BeanParseException, BeanConstructException {
@@ -40,13 +41,20 @@ public class BeanFactory {
                 }
                 _setField(instance, field);
             }
-            instances.put(clazz, instance);
+            BeanConstruct construct = clazz.getAnnotation(BeanConstruct.class);
+            if(null != construct) {
+                instances.put(construct.value(), instance);
+            }
         }
     }
 
     @SuppressWarnings("unchecked")
     private <T> T createInstance(Class<?> clazz) throws BeanConstructException {
         try {
+            BeanConstruct construct = clazz.getAnnotation(BeanConstruct.class);
+            if(null != construct && instances.containsKey(construct.value())) {
+                return (T) instances.get(construct.value());
+            }
             return (T) clazz.newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
             throw new BeanConstructException(e);
@@ -56,7 +64,9 @@ public class BeanFactory {
     private <T> void _setField(T instance, Field field) throws BeanConstructException {
         try {
             field.setAccessible(true);
-            field.set(instance, produce(field));
+            Object tmp = instances.get(field.getType());
+            Object val = null == tmp ? produce(field) : tmp;
+            field.set(instance, val);
         } catch (IllegalAccessException e) {
             throw new BeanConstructException(e);
         }
@@ -68,6 +78,7 @@ public class BeanFactory {
         if(null == instance) {
             throw new IllegalArgumentException(String.format("produce failed. can not create instance of %s", field.getType().getName()));
         }
+        instances.put(field.getType(), instance);
         return instance;
     }
 

@@ -19,17 +19,17 @@ public interface IManager {
     /**
      * 加入游戏
      */
-    void join();
+    IResult join();
 
     /**
      * 离开游戏
      */
-    void leave();
+    IResult leave();
 
     /**
      * 自定义游戏调用
      */
-    void invoke();
+    IResult invoke();
 
 
 }

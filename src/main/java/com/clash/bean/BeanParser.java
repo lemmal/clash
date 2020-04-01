@@ -3,6 +3,8 @@ package com.clash.bean;
 import com.clash.logger.ClashLogger;
 
 import java.io.File;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
@@ -69,17 +71,28 @@ public class BeanParser {
 
     @SuppressWarnings("unchecked")
     private void parseProvider(Class<?> clazz) {
-        if(!IBeanProvider.class.isAssignableFrom(clazz)) {
+        if(clazz.equals(IBeanProvider.class) || !IBeanProvider.class.isAssignableFrom(clazz)) {
             return;
         }
-        BeanProvider provider = clazz.getAnnotation(BeanProvider.class);
-        if(null == provider) {
-            return;
+        Class<?> pi = getProviderInterface(clazz);
+        if(null == pi) {
+            throw new IllegalArgumentException(String.format("generic type not found : %s", clazz.getName()));
         }
-        if(constructs.containsKey(provider.value()) || providers.containsKey(provider.value())) {
-            throw new IllegalArgumentException(String.format("duplicate construct or provider : %s", provider.value().getName()));
+        if(constructs.containsKey(pi) || providers.containsKey(pi)) {
+            throw new IllegalArgumentException(String.format("duplicate construct or provider : %s", pi.getName()));
         }
-        providers.put(provider.value(), (Class<? extends IBeanProvider<?>>) clazz);
+        providers.put(pi, (Class<? extends IBeanProvider<?>>) clazz);
+    }
+
+    private Class<?> getProviderInterface(Class<?> clazz) {
+        for (Type type : clazz.getGenericInterfaces()) {
+            ParameterizedType pt = (ParameterizedType) type;
+            if(pt.getRawType().equals(IBeanProvider.class)) {
+                Type arg = pt.getActualTypeArguments()[0];
+                return (Class<?>) arg;
+            }
+        }
+        return null;
     }
 
     private void parseConsumer(Class<?> clazz) {
