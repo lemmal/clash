@@ -1,17 +1,18 @@
 package com.clash;
 
 import com.clash.bean.*;
+import com.clash.logger.ClashLogger;
 import com.clash.processor.IProcessor;
 import com.clash.processor.ProcessorPipeline;
+import com.clash.synchronizer.CASSynchronizer;
 import com.clash.synchronizer.ISynchronizer;
-import com.clash.synchronizer.NativeSynchronizer;
 
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * 测试引导
  */
-public class Bootstrap {
+public class BootstrapForTest {
 
     public static void main(String[] args) throws BeanParseException, BeanConstructException {
         IManager manager = BeanFactory.buildManager(BootstrapManager.class);
@@ -30,37 +31,37 @@ public class Bootstrap {
 
         @Override
         public void init() {
-            System.out.println("init");
+            ClashLogger.info("init");
         }
 
         @Override
         public void start() {
-            System.out.println("start");
+            ClashLogger.info("start");
         }
 
         @Override
         public void destroy() {
-            System.out.println("destroy");
+            ClashLogger.info("destroy");
         }
 
         @Override
         public IResult join() {
             context.getJoinPipeline().process();
-            System.out.println("join");
+            ClashLogger.info("join");
             return null;
         }
 
         @Override
         public IResult leave() {
             context.getSynchronizer().submit(() -> context.getLeavePipeline().process());
-            System.out.println("leave");
+            ClashLogger.info("leave");
             return null;
         }
 
         @Override
         public IResult invoke() {
             context.getInvokePipeline().process();
-            System.out.println("invoke");
+            ClashLogger.info("invoke");
             return null;
         }
     }
@@ -105,7 +106,7 @@ public class Bootstrap {
 
         @Override
         public IResult process() {
-            System.out.println("process");
+            ClashLogger.info("process");
             return () -> true;
         }
     }
@@ -114,7 +115,7 @@ public class Bootstrap {
 
         @Override
         public IResult process() {
-            System.out.println("process join");
+            ClashLogger.info("process join");
             return () -> true;
         }
     }
@@ -123,7 +124,7 @@ public class Bootstrap {
 
         @Override
         public IResult process() {
-            System.out.println("process leave");
+            ClashLogger.info("process leave");
             return () -> true;
         }
     }
@@ -132,7 +133,7 @@ public class Bootstrap {
 
         @Override
         public IResult process() {
-            System.out.println("process invoke");
+            ClashLogger.info("process invoke");
             return () -> true;
         }
     }
@@ -141,7 +142,7 @@ public class Bootstrap {
 
         @Override
         public ISynchronizer provide() {
-            return new NativeSynchronizer();
+            return new CASSynchronizer();
         }
     }
 }
