@@ -21,11 +21,11 @@ public class ProcessorPipeline implements IProcessorPipeline {
         IResult result = null;
         for (IProcessor processor : processors) {
             result = processor.process();
-            if (!result.isSuccess()) {
+            if (null == result || !result.isSuccess()) {
                 break;
             }
         }
-        return result;
+        return null != result ? result : () -> false;
     }
 
 

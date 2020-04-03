@@ -1,6 +1,8 @@
 package com.clash.bean;
 
 import com.clash.logger.ClashLogger;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
@@ -13,8 +15,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class BeanParser {
-    private Map<Class<?>, Class<?>> constructs = new HashMap<>();
-    private Map<Class<?>, Class<? extends IBeanProvider<?>>> providers = new HashMap<>();
+    private Table<Class<?>, String, Class<?>> constructs = HashBasedTable.create();
+    private Table<Class<?>, String, IBeanProvider<?>> providers = HashBasedTable.create();
     private Set<Class<?>> consumers = new HashSet<>();
 
     private static final String PACKAGE_BEGIN = "com";
@@ -26,11 +28,11 @@ public class BeanParser {
 
     }
 
-    public Map<Class<?>, Class<?>> getConstructs() {
+    public Table<Class<?>, String, Class<?>> getConstructs() {
         return constructs;
     }
 
-    public Map<Class<?>, Class<? extends IBeanProvider<?>>> getProviders() {
+    public Table<Class<?>, String, ? extends IBeanProvider<?>> getProviders() {
         return providers;
     }
 
@@ -74,18 +76,23 @@ public class BeanParser {
     }
 
     @SuppressWarnings("unchecked")
-    private void parseProvider(Class<?> clazz) {
+    private void parseProvider(Class<?> clazz) throws BeanParseException {
         if(clazz.equals(IBeanProvider.class) || !IBeanProvider.class.isAssignableFrom(clazz)) {
             return;
         }
-        Class<?> pi = getProviderInterface(clazz);
-        if(null == pi) {
+        Class<?> targetInterface = getProviderInterface(clazz);
+        if(null == targetInterface) {
             throw new IllegalArgumentException(String.format("generic type not found : %s", clazz.getName()));
         }
-        if(constructs.containsKey(pi) || providers.containsKey(pi)) {
-            throw new IllegalArgumentException(String.format("duplicate construct or provider : %s", pi.getName()));
+        try {
+            IBeanProvider<?> provider = ((Class<? extends IBeanProvider<?>>) clazz).newInstance();
+            if(constructs.contains(targetInterface, provider.name()) || providers.contains(targetInterface, provider.name())) {
+                throw new IllegalArgumentException(String.format("duplicate construct or provider : %s", targetInterface.getName()));
+            }
+            providers.put(targetInterface, provider.name(), provider);
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new BeanParseException(e);
         }
-        providers.put(pi, (Class<? extends IBeanProvider<?>>) clazz);
     }
 
     private Class<?> getProviderInterface(Class<?> clazz) {
@@ -161,10 +168,12 @@ public class BeanParser {
 
     private void _addBeanConstruct(Class<?> clazz) {
         BeanConstruct annotation = clazz.getAnnotation(BeanConstruct.class);
-        if(constructs.containsKey(annotation.value()) || providers.containsKey(annotation.value())) {
+        Class<?> targetInterface = annotation.value();
+        String name = annotation.name();
+        if(constructs.contains(targetInterface, name) || providers.contains(targetInterface, name)) {
             throw new IllegalArgumentException(String.format("duplicate construct or provider : %s", annotation.value().getName()));
         }
-        constructs.put(annotation.value(), clazz);
+        constructs.put(targetInterface, name, clazz);
     }
 
     private String path2FullClassName(String path) {

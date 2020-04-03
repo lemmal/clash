@@ -2,6 +2,8 @@ package com.clash.bean;
 
 import com.clash.Constants;
 import com.clash.IManager;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -14,12 +16,12 @@ import java.util.stream.Collectors;
  */
 public class BeanFactory {
     private BeanParser beanParser;
-    private Map<Class<?>, Object> instances;
+    private Table<Class<?>, String, Object> instances;
 
     @SuppressWarnings("unchecked")
     public static <T extends IManager> T buildManager(Class<T> clazz, String... paths) throws BeanParseException, BeanConstructException {
         BeanFactory factory = new BeanFactory(Arrays.stream(paths).collect(Collectors.toList()));
-        return (T) factory.instances.get(IManager.class);
+        return (T) factory.instances.get(IManager.class, "");
     }
 
     public BeanFactory(List<String> paths) throws BeanParseException, BeanConstructException {
@@ -30,7 +32,7 @@ public class BeanFactory {
     }
 
     private void initConsumer() throws BeanConstructException {
-        instances = new HashMap<>();
+        instances = HashBasedTable.create();
         Set<Class<?>> consumers = beanParser.getConsumers();
         for (Class<?> clazz : consumers) {
             Object instance = createInstance(clazz);
@@ -39,11 +41,11 @@ public class BeanFactory {
                 if(null == autowire) {
                     continue;
                 }
-                _setField(instance, field);
+                _setField(instance, field, autowire);
             }
             BeanConstruct construct = clazz.getAnnotation(BeanConstruct.class);
             if(null != construct) {
-                instances.put(construct.value(), instance);
+                instances.put(construct.value(), construct.name(), instance);
             }
         }
     }
@@ -52,8 +54,8 @@ public class BeanFactory {
     private <T> T createInstance(Class<?> clazz) throws BeanConstructException {
         try {
             BeanConstruct construct = clazz.getAnnotation(BeanConstruct.class);
-            if(null != construct && instances.containsKey(construct.value())) {
-                return (T) instances.get(construct.value());
+            if(null != construct && instances.contains(construct.value(), construct.name())) {
+                return (T) instances.get(construct.value(), construct.name());
             }
             return (T) clazz.newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
@@ -61,29 +63,29 @@ public class BeanFactory {
         }
     }
 
-    private <T> void _setField(T instance, Field field) throws BeanConstructException {
+    private <T> void _setField(T instance, Field field, BeanAutowire autowire) throws BeanConstructException {
         try {
             field.setAccessible(true);
-            Object tmp = instances.get(field.getType());
-            Object val = null == tmp ? produce(field) : tmp;
+            Object tmp = instances.get(field.getType(), autowire.value());
+            Object val = null == tmp ? produce(field, autowire) : tmp;
             field.set(instance, val);
         } catch (IllegalAccessException e) {
             throw new BeanConstructException(e);
         }
     }
 
-    private Object produce(Field field) throws BeanConstructException {
-        Object instance = produceByConstruct(field.getType());
-        instance = null == instance ? produceByProvide(field.getType()) : instance;
+    private Object produce(Field field, BeanAutowire autowire) throws BeanConstructException {
+        Object instance = produceByConstruct(field.getType(), autowire);
+        instance = null == instance ? produceByProvide(field.getType(), autowire) : instance;
         if(null == instance) {
-            throw new IllegalArgumentException(String.format("produce failed. can not create instance of %s", field.getType().getName()));
+            throw new IllegalArgumentException(String.format("produce failed. can not create instance of %s, name: %s", field.getType().getName(), autowire.value()));
         }
-        instances.put(field.getType(), instance);
+        instances.put(field.getType(), autowire.value(), instance);
         return instance;
     }
 
-    private Object produceByConstruct(Class<?> fieldClass) throws BeanConstructException {
-        Class<?> clazz = beanParser.getConstructs().get(fieldClass);
+    private Object produceByConstruct(Class<?> fieldClass, BeanAutowire autowire) throws BeanConstructException {
+        Class<?> clazz = beanParser.getConstructs().get(fieldClass, autowire.value());
         if(null == clazz) {
             return null;
         }
@@ -96,15 +98,11 @@ public class BeanFactory {
         }
     }
 
-    private Object produceByProvide(Class<?> fieldClass) throws BeanConstructException {
-        Class<? extends IBeanProvider<?>> provider = beanParser.getProviders().get(fieldClass);
+    private Object produceByProvide(Class<?> fieldClass, BeanAutowire autowire) {
+        IBeanProvider<?> provider = beanParser.getProviders().get(fieldClass, autowire.value());
         if(null == provider) {
             return null;
         }
-        try {
-            return provider.newInstance().provide();
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new BeanConstructException(e);
-        }
+        return provider.provide();
     }
 }
