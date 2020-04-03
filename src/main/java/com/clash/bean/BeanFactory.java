@@ -24,7 +24,7 @@ public class BeanFactory {
 
     public BeanFactory(List<String> paths) throws BeanParseException, BeanConstructException {
         LinkedList<String> pathList = new LinkedList<>(paths);
-        pathList.add(Constants.DEFAULT_PATH);
+        pathList.add(Constants.DEFAULT_PACKAGE);
         beanParser = new BeanParser().parseClasses(pathList);
         initConsumer();
     }

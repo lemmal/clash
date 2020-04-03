@@ -3,11 +3,14 @@ package com.clash.bean;
 import com.clash.logger.ClashLogger;
 
 import java.io.File;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class BeanParser {
     private Map<Class<?>, Class<?>> constructs = new HashMap<>();
@@ -36,7 +39,8 @@ public class BeanParser {
     }
 
     public BeanParser parseClasses(List<String> paths) throws BeanParseException {
-        List<File> files = getClassFiles(paths);
+        List<String> filePaths = paths.stream().map(p -> p.replace(PACKAGE_SPLITTER, PATH_SPLITTER)).collect(Collectors.toList());
+        List<File> files = getClassFiles(filePaths);
         for (File classFile : files) {
             String path = classFile.getAbsolutePath();
             if(!path.endsWith(CLASS_END)) {
@@ -115,7 +119,7 @@ public class BeanParser {
     }
 
     private void fetchFiles(List<File> files, URL url) {
-        File file = new File(url.getPath());
+        File file = new File(decode(url.getPath()));
         if(!file.isDirectory()) {
             return;
         }
@@ -136,6 +140,14 @@ public class BeanParser {
 
     private URL getURL(String path) {
         return Thread.currentThread().getContextClassLoader().getResource(path);
+    }
+
+    private String decode(String content) {
+        try {
+            return URLDecoder.decode(content, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalArgumentException();
+        }
     }
 
     private boolean isConstructorExist(Class<?> clazz) {
