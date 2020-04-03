@@ -1,21 +1,6 @@
 package com.clash;
 
-public interface IManager {
-    /**
-     * 初始化工作
-     */
-    void init();
-
-    /**
-     * 回合流转开始
-     */
-    void start();
-
-    /**
-     * 游戏结束销毁内容
-     */
-    void destroy();
-
+public interface IManager extends ILifeCycle{
     /**
      * 加入游戏
      */

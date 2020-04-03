@@ -1,4 +1,5 @@
 package com.clash;
 
-public interface IPlayerContainer {
+public interface IPlayerContainer extends ILifeCycle{
+
 }

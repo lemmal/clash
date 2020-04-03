@@ -18,13 +18,22 @@ public class BeanFactory {
     private BeanParser beanParser;
     private Table<Class<?>, String, Object> instances;
 
-    @SuppressWarnings("unchecked")
-    public static <T extends IManager> T buildManager(Class<T> clazz, String... paths) throws BeanParseException, BeanConstructException {
-        BeanFactory factory = new BeanFactory(Arrays.stream(paths).collect(Collectors.toList()));
-        return (T) factory.instances.get(IManager.class, "");
+    //TODO 获取bean逻辑
+
+    public static BeanFactory init(String... paths) throws BeanParseException, BeanConstructException {
+        return new BeanFactory(Arrays.stream(paths).collect(Collectors.toList()));
     }
 
-    public BeanFactory(List<String> paths) throws BeanParseException, BeanConstructException {
+    public <T extends IManager> T getManager(Class<T> clazz) {
+        return getBean(clazz, "");
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T getBean(Class<T> clazz, String name) {
+        return (T) instances.get(clazz, name);
+    }
+
+    private BeanFactory(List<String> paths) throws BeanParseException, BeanConstructException {
         LinkedList<String> pathList = new LinkedList<>(paths);
         pathList.add(Constants.DEFAULT_PACKAGE);
         beanParser = new BeanParser().parseClasses(pathList);
