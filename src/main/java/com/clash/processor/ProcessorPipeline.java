@@ -1,5 +1,6 @@
 package com.clash.processor;
 
+import com.clash.param.IParam;
 import com.clash.IResult;
 
 import java.util.LinkedList;
@@ -17,10 +18,10 @@ public class ProcessorPipeline implements IProcessorPipeline {
     }
 
     @Override
-    public IResult process() {
+    public IResult process(IParam param) {
         IResult result = null;
         for (IProcessor processor : processors) {
-            result = processor.process();
+            result = processor.process(param);
             if (null == result || !result.isSuccess()) {
                 break;
             }
