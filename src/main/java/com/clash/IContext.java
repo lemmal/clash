@@ -12,7 +12,7 @@ public interface IContext extends ILifeCycle{
 
     ISynchronizer getSynchronizer();
 
-    IPlayerContainer getPlayerContainer();
+    IPlayerContainer<?> getPlayerContainer();
 
     ComponentContainer getComponentContainer();
 

@@ -5,9 +5,7 @@ import com.clash.IManager;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -18,33 +16,23 @@ public class BeanFactory {
     private BeanParser beanParser;
     private Table<Class<?>, String, Object> instances;
 
-    //TODO 获取bean逻辑
-
     public static BeanFactory init(String... paths) throws BeanParseException, BeanConstructException {
         return new BeanFactory(Arrays.stream(paths).collect(Collectors.toList()));
     }
 
-    public <T extends IManager> T getManager(Class<T> clazz) {
-        return getBean(clazz, "");
-    }
-
-    @SuppressWarnings("unchecked")
-    public <T> T getBean(Class<T> clazz, String name) {
-        return (T) instances.get(clazz, name);
-    }
-
-    private BeanFactory(List<String> paths) throws BeanParseException, BeanConstructException {
-        LinkedList<String> pathList = new LinkedList<>(paths);
-        pathList.add(Constants.DEFAULT_PACKAGE);
-        beanParser = new BeanParser().parseClasses(pathList);
+    public void initInstances() throws BeanConstructException {
         initConsumer();
     }
 
-    private void initConsumer() throws BeanConstructException {
-        instances = HashBasedTable.create();
-        Set<Class<?>> consumers = beanParser.getConsumers();
-        for (Class<?> clazz : consumers) {
-            Object instance = createInstance(clazz);
+    public <T extends IManager> T getManager(Class<T> clazz) throws BeanConstructException {
+        return consumeBean(clazz, "");
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T consumeBean(Class<T> clazz, String name) throws BeanConstructException {
+        Object instance = instances.get(clazz, name);
+        if(null == instance) {
+            instance = createInstance(clazz);
             for (Field field : clazz.getDeclaredFields()) {
                 BeanAutowire autowire = field.getAnnotation(BeanAutowire.class);
                 if(null == autowire) {
@@ -52,24 +40,64 @@ public class BeanFactory {
                 }
                 _setField(instance, field, autowire);
             }
+        }
+        return (T) instance;
+    }
+
+    private BeanFactory(List<String> paths) throws BeanParseException, BeanConstructException {
+        LinkedList<String> pathList = new LinkedList<>(paths);
+        pathList.add(Constants.DEFAULT_PACKAGE);
+        beanParser = new BeanParser().parseClasses(pathList);
+    }
+
+    private void initConsumer() throws BeanConstructException {
+        instances = HashBasedTable.create();
+        Set<Class<?>> consumers = beanParser.getConsumers();
+        for (Class<?> clazz : consumers) {
+            initThroughClass(clazz);
+        }
+    }
+
+    private void initThroughClass(Class<?> clazz) throws BeanConstructException {
+        for (Object instance : createInstances(clazz)) {
             BeanConstruct construct = clazz.getAnnotation(BeanConstruct.class);
             if(null != construct) {
                 instances.put(construct.value(), construct.name(), instance);
             }
+            for (Field field : clazz.getDeclaredFields()) {
+                BeanAutowire autowire = field.getAnnotation(BeanAutowire.class);
+                if(null == autowire) {
+                    continue;
+                }
+                _setField(instance, field, autowire);
+            }
+        }
+    }
+
+    private List<Object> createInstances(Class<?> clazz) throws BeanConstructException {
+        if(clazz.isEnum()) {
+            return createEnumInstances(clazz);
+        }
+        Object instance = createInstance(clazz);
+        return Collections.singletonList(instance);
+    }
+
+    private Object createInstance(Class<?> clazz) throws BeanConstructException {
+        try {
+            BeanConstruct construct = clazz.getAnnotation(BeanConstruct.class);
+            if(null != construct && instances.contains(construct.value(), construct.name())) {
+                return instances.get(construct.value(), construct.name());
+            }
+            return clazz.newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new BeanConstructException(e);
         }
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T createInstance(Class<?> clazz) throws BeanConstructException {
-        try {
-            BeanConstruct construct = clazz.getAnnotation(BeanConstruct.class);
-            if(null != construct && instances.contains(construct.value(), construct.name())) {
-                return (T) instances.get(construct.value(), construct.name());
-            }
-            return (T) clazz.newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new BeanConstructException(e);
-        }
+    private List<Object> createEnumInstances(Class<?> clazz) {
+        Enum<?>[] constants = ((Class<Enum<?>>) clazz).getEnumConstants();
+        return Arrays.stream(constants).collect(Collectors.toList());
     }
 
     private <T> void _setField(T instance, Field field, BeanAutowire autowire) throws BeanConstructException {
