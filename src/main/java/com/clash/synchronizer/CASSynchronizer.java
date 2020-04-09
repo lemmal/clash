@@ -31,7 +31,8 @@ public class CASSynchronizer implements ISynchronizer {
 
     private void acquire() {
         long begin = System.currentTimeMillis();
-        while(!mutex.compareAndSet(EMPTY_THREAD, Thread.currentThread().getId())) {
+        long currentId = Thread.currentThread().getId();
+        while(currentId != mutex.get() && !mutex.compareAndSet(EMPTY_THREAD, currentId)) {
 
         }
         long duration = System.currentTimeMillis() - begin;
