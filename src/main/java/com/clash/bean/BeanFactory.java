@@ -135,11 +135,14 @@ public class BeanFactory {
         }
     }
 
-    private Object produceByProvide(Class<?> fieldClass, BeanAutowire autowire) {
+    private Object produceByProvide(Class<?> fieldClass, BeanAutowire autowire) throws BeanConstructException {
         IBeanProvider<?> provider = beanParser.getProviders().get(fieldClass, autowire.value());
         if(null == provider) {
             return null;
         }
-        return provider.provide();
+        if(null == provider.getClass().getAnnotation(BeanConsumer.class)) {
+            return provider.provide();
+        }
+        return consumeBean(provider.getClass(), provider.name()).provide();
     }
 }
