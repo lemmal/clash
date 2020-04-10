@@ -10,7 +10,8 @@ public class CASSynchronizer implements ISynchronizer {
     private AtomicInteger count = new AtomicInteger(0);
 
     private static final long EMPTY_THREAD = -1;
-    private static final String WAIT_KEY = "synchronizer.cas.wait_milliseconds";
+    private static final String WAIT_EACH = "clash.cas_synchronizer.wait_each";
+    private static final String WAIT_TOTAL = "clash.cas_synchronizer.wait_total";
 
     @Override
     public void submit(ISynchronizerRunnable task) {
@@ -41,9 +42,18 @@ public class CASSynchronizer implements ISynchronizer {
         }
         while(!mutex.compareAndSet(EMPTY_THREAD, currentId)) {
             long duration = System.currentTimeMillis() - begin;
-            if(duration >= ClashProperties.INSTANCE.getIntVal(WAIT_KEY)) {
+            if(duration >= ClashProperties.INSTANCE.getIntVal(WAIT_TOTAL)) {
                 throw new RuntimeException("acquire wait too long : " + duration);
             }
+            await();
+        }
+    }
+
+    private void await() {
+        try {
+            mutex.wait(ClashProperties.INSTANCE.getIntVal(WAIT_EACH));
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
