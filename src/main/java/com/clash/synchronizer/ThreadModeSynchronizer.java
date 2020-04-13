@@ -1,15 +1,16 @@
 package com.clash.synchronizer;
 
 import com.clash.IContext;
-import com.clash.bean.*;
 import com.clash.logger.ClashLogger;
 
 import java.util.concurrent.ExecutionException;
 
-@BeanConsumer
 public class ThreadModeSynchronizer implements ISynchronizer {
-    @BeanAutowire
     private IContext context;
+
+    public ThreadModeSynchronizer(IContext context) {
+        this.context = context;
+    }
 
     @Override
     public void submit(ISynchronizerRunnable task) {

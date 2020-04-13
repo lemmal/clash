@@ -10,8 +10,18 @@ import java.util.function.Supplier;
 public class ComponentContainer {
     private Map<Class<? extends IComponent>, IComponent> components = new HashMap<>();
 
-    public <T extends IComponent>void register(T component) {
-        components.put(component.getClass(), component);
+    public <T extends IComponent> void register(T component) {
+        components.put(getInterface(component.getClass()), component);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Class<? extends IComponent> getInterface(Class<? extends IComponent> clazz) {
+        for (Class<?> itf : clazz.getInterfaces()) {
+            if(IComponent.class.isAssignableFrom(itf) && !IComponent.class.equals(itf)) {
+                return getInterface((Class<? extends IComponent>) itf);
+            }
+        }
+        return clazz;
     }
 
     @SuppressWarnings("unchecked")

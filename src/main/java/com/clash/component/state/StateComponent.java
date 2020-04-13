@@ -1,8 +1,6 @@
 package com.clash.component.state;
 
 import com.clash.IContext;
-import com.clash.bean.BeanAutowire;
-import com.clash.bean.BeanConsumer;
 import com.clash.logger.ClashLogger;
 
 import java.time.LocalDateTime;
@@ -12,17 +10,19 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-@BeanConsumer
 public class StateComponent implements IStateComponent {
-    @BeanAutowire
     private IContext context;
-    @BeanAutowire
     private StateRegister register;
     private Map<Integer, IState> states;
     private int curStateId;
     private LocalDateTime nextStateTime;
     private Future<?> future;
     private boolean isDestroy;
+
+    public StateComponent(IContext context, StateRegister register) {
+        this.context = context;
+        this.register = register;
+    }
 
     @Override
     public void init() {
