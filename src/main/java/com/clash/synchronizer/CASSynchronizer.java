@@ -36,22 +36,22 @@ public class CASSynchronizer implements ISynchronizer {
     private void acquire() {
         long begin = System.currentTimeMillis();
         long currentId = Thread.currentThread().getId();
-        if(currentId == mutex.get()) {
-            count.incrementAndGet();
-            return;
-        }
-        while(!mutex.compareAndSet(EMPTY_THREAD, currentId)) {
-            long duration = System.currentTimeMillis() - begin;
-            if(duration >= ClashProperties.INSTANCE.getIntVal(WAIT_TOTAL)) {
-                throw new RuntimeException("acquire wait too long : " + duration);
+        if(currentId != mutex.get()) {
+            while(!mutex.compareAndSet(EMPTY_THREAD, currentId)) {
+                long duration = System.currentTimeMillis() - begin;
+                if(duration >= ClashProperties.INSTANCE.getIntVal(WAIT_TOTAL)) {
+                    throw new RuntimeException("acquire wait too long : " + duration);
+                }
+                await();
             }
-            await();
         }
+        count.incrementAndGet();
     }
 
     private void await() {
         try {
-            mutex.wait(ClashProperties.INSTANCE.getIntVal(WAIT_EACH));
+            int milliSeconds = ClashProperties.INSTANCE.getIntVal(WAIT_EACH);
+            Thread.sleep(milliSeconds);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
