@@ -1,6 +1,7 @@
-package com.clash.handler;
+package com.clash.bean;
 
-import com.clash.bean.BeanFactory;
+import com.clash.handler.IInvokeHandler;
+import com.clash.handler.InvokeCommand;
 
 import java.util.HashMap;
 import java.util.Map;

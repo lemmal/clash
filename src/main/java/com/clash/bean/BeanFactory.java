@@ -16,11 +16,11 @@ public class BeanFactory {
     private BeanParser beanParser;
     private Table<Class<?>, String, Object> instances;
 
-    public static BeanFactory init(String... paths) throws BeanParseException, BeanConstructException {
-        return new BeanFactory(Arrays.stream(paths).collect(Collectors.toList()));
+    public static BeanFactory scan(String... packs) throws BeanParseException, BeanConstructException {
+        return new BeanFactory(Arrays.stream(packs).collect(Collectors.toList()));
     }
 
-    public void initInstances() throws BeanConstructException {
+    public void init() throws BeanConstructException {
         initConsumer();
     }
 
@@ -29,7 +29,7 @@ public class BeanFactory {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T consumeBean(Class<T> clazz, String name) throws BeanConstructException {
+    <T> T consumeBean(Class<T> clazz, String name) throws BeanConstructException {
         Object instance = instances.get(clazz, name);
         if(null == instance) {
             instance = createInstance(clazz);
